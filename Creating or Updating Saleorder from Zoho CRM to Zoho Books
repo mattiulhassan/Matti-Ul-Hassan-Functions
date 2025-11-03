@@ -1,0 +1,72 @@
+organizationID = "org_id";
+crm_salesorder = zoho.crm.getRecordById("Sales_Orders",id);
+contact_criteria = crm_salesorder.get("Contact_Name").get("id");
+books_salesorder_map = Map();
+searchParam = {"zcrm_contact_id":contact_criteria};
+search_customer = zoho.books.getRecords("contacts",organizationID,searchParam,"books");
+if(search_customer.size() > 0)
+{
+	customer_id = search_customer.get("contacts").getJSON("contact_id");
+	info "Customer ID found in Books: " + customer_id;
+	books_salesorder_map.put("customer_id",customer_id);
+}
+else
+{
+	info "Customer not found in Books for contact ID: " + contact_criteria;
+}
+books_line_items = List();
+crm_line_items = crm_salesorder.get("Product_Details");
+for each  line_item in crm_line_items
+{
+	crm_product = line_item.get("product");
+	if(crm_product != null)
+	{
+		crm_product_id = crm_product.get("id");
+		product_info = zoho.crm.getRecordById("Products",crm_product_id);
+		rate = line_item.get("list_price");
+		quantity = line_item.get("quantity");
+		tax_amount = line_item.get("Tax");
+		product_name = product_info.get("Product_Name");
+		searchParam = {"item_name":product_name};
+		search_item = zoho.books.getRecords("items",organizationID,searchParam,"books");
+		if(search_item.size() > 0 || search_item != null)
+		{
+			books_item = search_item.get("items");
+			books_item_id = books_item.getJSON("item_id");
+		}
+		item_map = Map();
+		item_map.put("item_id",books_item_id);
+		item_map.put("rate",rate);
+		item_map.put("quantity",quantity);
+		item_map.put("description",line_item.get("product_description"));
+		item_map.put("tax_amount",tax_amount);
+		item_map.put("discount",line_item.get("Discount"));
+		books_line_items.add(item_map);
+	}
+}
+// books_salesorder_map.put("salesorder_number", crm_salesorder.get("SO_Number"));
+// books_salesorder_map.put("date", crm_salesorder.get("Created_Time"));
+// books_salesorder_map.put("status", "draft");
+books_salesorder_map.put("line_items",books_line_items);
+// books_salesorder_map.put("reference_number", crm_salesorder.get("Subject"));
+books_salesorder_map.put("discount",crm_salesorder.get("Discount"));
+books_salesorder_map.put("notes",crm_salesorder.get("Description"));
+books_salesorder_map.put("terms",crm_salesorder.get("Terms_and_Conditions"));
+if(crm_salesorder.get("Books_Salesorder_id").size() > 0)
+{
+	info "Updating";
+	existing_salesorder_id = crm_salesorder.get("Books_Salesorder_id").toNumber();
+	update_resp = zoho.books.updateRecord("salesorders",organizationID,existing_salesorder_id,books_salesorder_map,"books");
+	info update_resp;
+}
+else
+{
+	info "Creating";
+	create_resp = zoho.books.createRecord("salesorders",organizationID,books_salesorder_map,"books");
+	info create_resp;
+	salesorder_id = create_resp.get("salesorder").get("salesorder_id");
+	so_update = Map();
+	so_update.put("Books_Salesorder_id",salesorder_id);
+	update_crm = zoho.crm.updateRecord("Sales_Orders",id,so_update);
+	info update_crm;
+}
