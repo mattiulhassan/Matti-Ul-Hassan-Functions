@@ -1,0 +1,71 @@
+organizationID = "684890986";
+crm_quote = zoho.crm.getRecordById("Quotes",id);
+contact_criteria = crm_quote.get("Contact_Name").get("id");
+books_estimate_map = Map();
+searchParam = {"zcrm_contact_id":contact_criteria};
+search_customer = zoho.books.getRecords("contacts",organizationID,searchParam,"books");
+if(search_customer.size() > 0)
+{
+	customer_id = search_customer.get("contacts").getJSON("contact_id");
+	books_estimate_map.put("customer_id",customer_id);
+}
+info "Customer ID found in Books: " + customer_id;
+books_line_items = List();
+crm_line_items = crm_quote.get("Product_Details");
+for each  line_item in crm_line_items
+{
+	crm_product = line_item.get("product");
+	if(crm_product != null)
+	{
+		crm_product_id = crm_product.get("id");
+		product_info = zoho.crm.getRecordById("Products",crm_product_id);
+		rate = line_item.get("list_price");
+		quantity = line_item.get("quantity");
+		tax_amount = line_item.get("Tax");
+		product_name = product_info.get("Product_Name");
+		searchParam = {"item_name":product_name};
+		search_item = zoho.books.getRecords("items",organizationID,searchParam,"books");
+		if(search_item.size() > 0 || search_item != null)
+		{
+			books_item = search_item.get("items");
+			books_item_id = books_item.getJSON("item_id");
+		}
+		else
+		{
+			books_item_id = "";
+		}
+		item_map = Map();
+		item_map.put("item_id",books_item_id);
+		item_map.put("rate",rate);
+		item_map.put("quantity",quantity);
+		item_map.put("description",line_item.get("product_description"));
+		item_map.put("tax_amount",tax_amount);
+		item_map.put("discount",line_item.get("Discount"));
+		books_line_items.add(item_map);
+	}
+}
+// books_estimate_map.put("estimate_number", crm_quote.get("Quote_Number"));
+// books_estimate_map.put("date", ifnull(crm_quote.get("Created_Time"), zoho.currentdate.toString("yyyy-MM-dd")));
+// books_estimate_map.put("expiry_date", ifnull(crm_quote.get("Valid_Till"), zoho.currentdate.toString("yyyy-MM-dd")));
+// books_estimate_map.put("status", "draft");
+books_estimate_map.put("line_items",books_line_items);
+// books_estimate_map.put("reference_number", crm_quote.get("Subject"));
+books_estimate_map.put("discount",crm_quote.get("Discount"));
+books_estimate_map.put("notes",crm_quote.get("Description"));
+books_estimate_map.put("terms",crm_quote.get("Terms_and_Conditions"));
+if(crm_quote.get("Books_Estimate_id").size() > 0)
+{
+	info "Updating";
+	existing_estimate_id = crm_quote.get("Books_Estimate_id").toNumber();
+	update_resp = zoho.books.updateRecord("estimates",organizationID,existing_estimate_id,books_estimate_map,"books");
+	info update_resp;
+}
+else
+{
+	info "Creating";
+	create_resp = zoho.books.createRecord("estimates",organizationID,books_estimate_map,"books");
+	estimate_id = create_resp.get("estimate").get("estimate_id");
+	quote_update = Map();
+	quote_update.put("Books_Estimate_id",estimate_id);
+	update_crm = zoho.crm.updateRecord("Quotes",id,quote_update);
+}
