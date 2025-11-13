@@ -1,0 +1,39 @@
+void automation.OverDue_Account(Int id)
+{
+sale_order = zoho.crm.getRecordById("Sales_Orders",id);
+account_info = sale_order.get("Account_Name");
+if(account_info != null)
+{
+	account_id = account_info.get("id");
+	sales_orders = zoho.crm.searchRecords("Sales_Orders","(Account_Name:equals:" + account_id + ")");
+	if(sales_orders.size() > 0)
+	{
+		max_total = 0.0;
+		top_order_id = null;
+		for each  order in sales_orders
+		{
+			grand_total = ifnull(order.get("Grand_Total"),0.0).toDecimal();
+			if(grand_total > max_total)
+			{
+				max_total = grand_total;
+				top_order_id = order.get("id");
+			}
+		}
+		for each  order in sales_orders
+		{
+			order_id_loop = order.get("id");
+			update_map = Map();
+			if(order_id_loop == top_order_id)
+			{
+				update_map.put("Outstanding_Balance","Outstanding Receivables");
+			}
+			else
+			{
+				update_map.put("Outstanding_Balance","None");
+			}
+			update_resp = zoho.crm.updateRecord("Sales_Orders",order_id_loop,update_map);
+			info update_resp;
+		}
+	}
+}
+}
