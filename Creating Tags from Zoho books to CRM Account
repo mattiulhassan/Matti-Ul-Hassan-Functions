@@ -1,0 +1,12 @@
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+invoice = zoho.books.getRecordsByID("Invoices",organizationID,invoiceID,"zbooks");
+one_invoice = invoice.get("invoice");
+crm_id = one_invoice.get("contact_persons_associated");
+contact_id = crm_id.getJSON("zcrm_contact_id");
+contact = zoho.crm.getRecordById("Contacts",contact_id,"crm");
+account_id = contact.get("Account_Name").get("id");
+tag_map = Map();
+tag_map.put("Tag","Overdue_Acc");
+info zoho.crm.updateRecord("Accounts",account_id,tag_map,"crm");
