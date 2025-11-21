@@ -10,14 +10,28 @@ account_id = inv_rec.get(0).get("Account_Name").get("id");
 info account_id;
 acc = zoho.crm.getRecordById("Accounts",account_id);
 tags = acc.get("Tag");
-if(tags != Null)
+searchParam = {"customer_name":one_invoice.get("customer_name")};
+search_invoice = zoho.books.getRecords("Invoices",organizationID,searchParam,"zbooks");
+single_invoice = search_invoice.get("invoice");
+check = true;
+for each  inv in single_invoice
 {
-	tagremove = Map();
-	tagremove.put("name",Null);
-	tagremove.put("color_code",Null);
-	tag_list = List();
-	tag_list.add(tagremove);
-	param = Map();
-	param.put("Tag",tag_list);
-	info zoho.crm.updateRecord("Accounts",account_id,param);
+	if(inv.get("status").contains("overdue"))
+	{
+		check = false;
+	}
+}
+if(check)
+{
+	if(tags != Null)
+	{
+		tagremove = Map();
+		tagremove.put("name",Null);
+		tagremove.put("color_code",Null);
+		tag_list = List();
+		tag_list.add(tagremove);
+		param = Map();
+		param.put("Tag",tag_list);
+		info zoho.crm.updateRecord("Accounts",account_id,param);
+	}
 }
