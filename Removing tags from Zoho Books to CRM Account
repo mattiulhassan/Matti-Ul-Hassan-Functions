@@ -1,0 +1,23 @@
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+invoice = zoho.books.getRecordsByID("Invoices",organizationID,invoiceID,"zbooks");
+one_invoice = invoice.get("invoice");
+inv_num = one_invoice.get("invoice_number");
+info inv_num;
+inv_rec = zoho.crm.searchRecords("Invoices","(Subject:equals:" + inv_num + ")");
+account_id = inv_rec.get(0).get("Account_Name").get("id");
+info account_id;
+acc = zoho.crm.getRecordById("Accounts",account_id);
+tags = acc.get("Tag");
+if(tags != Null)
+{
+	tagremove = Map();
+	tagremove.put("name",Null);
+	tagremove.put("color_code",Null);
+	tag_list = List();
+	tag_list.add(tagremove);
+	param = Map();
+	param.put("Tag",tag_list);
+	info zoho.crm.updateRecord("Accounts",account_id,param);
+}
