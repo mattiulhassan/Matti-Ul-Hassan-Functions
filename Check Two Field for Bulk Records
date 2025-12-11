@@ -1,0 +1,12 @@
+Data = project.get("custom_field_hash");
+Total = Data.get("cf_amount");
+budget = Data.get("cf_costo_directo_presupuestado");
+if(Total == budget)
+{
+	info "Success: Values match.";
+	info "Project ID: " + project.get("project_id");
+}
+else
+{
+	throws "Failure: cf_amount and cf_costo_directo_presupuestado do not match.";
+}
