@@ -1,0 +1,31 @@
+
+customerID = customer.get("contact_id");
+companyName = customer.get("company_name");
+organizationID = organization.get("organization_id");
+customer = zoho.books.getRecordsByID("contacts",organizationID,customerID,"zbooks");
+one_customer = customer.get("contact");
+// info one_customer;
+balance = one_customer.get("outstanding_receivable_amount");
+if(balance.contains("0.0") is false)
+{
+	info "Balance is not 0";
+	searchParam = {"customer_name":one_customer.get("contact_name")};
+	search_saleorder = zoho.books.getRecords("salesorders",organizationID,searchParam,"zbooks");
+	// 	info search_saleorder;
+	one_customer = search_saleorder.get("salesorders");
+	for each  saleorder in one_customer
+	{
+		id = saleorder.getJSON("salesorder_id");
+		data = Map();
+		//custom field
+		customfield1 = map();
+		customfield1.put("api_name","cf_outstanding_balance" );
+		customfield1.put("value", balance); 
+
+		finallist = list();
+		finallist.add(customfield1);
+		data.put("custom_fields",finallist); 
+		Update = zoho.books.updateRecord("salesorders",organizationID,id,data,"zbooks");
+		info Update; 
+	}
+}
