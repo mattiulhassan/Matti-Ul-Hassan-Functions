@@ -1,0 +1,22 @@
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+estimateDetails = zoho.books.getRecordsByID("estimates", organizationID, estimateID, "zbooks1");
+estimateData = estimateDetails.get("estimate");
+emailList = estimateData.get("contact_persons_associated");
+updatedContacts = List();
+for each mail in emailList
+{
+	commPref = mail.get("communication_preference");
+	if(commPref == null)
+	{
+		commPref = Map();
+	}
+	commPref.put("is_email_enabled", false);
+	mail.put("communication_preference", commPref);
+	updatedContacts.add(mail);
+}
+updateMap = Map();
+updateMap.put("contact_persons_associated", updatedContacts);
+updateResp = zoho.books.updateRecord("estimates", organizationID, estimateID, updateMap, "zbooks1");
+info updateResp;
