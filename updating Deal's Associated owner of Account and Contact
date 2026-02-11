@@ -1,0 +1,25 @@
+deal_rec = zoho.crm.getRecordById("Deals",id);
+account_id = deal_rec.get("Account_Name").getJSON("id");
+if(account_id != Null)
+{
+	account_rec = zoho.crm.getRecordById("Accounts",account_id);
+	account_owner = account_rec.get("Owner").get("Name");
+	if(account_owner != deal_rec.get("Owner").get("Name"))
+	{
+		updt = Map();
+		updt.put("Owner",deal_rec.get("Owner").get("id"));
+		info zoho.crm.updateRecord("Accounts",account_id,updt);
+	}
+}
+contact_id = deal_rec.get("Contact_Name").get("id");
+if(contact_id != Null)
+{
+	contact_rec = zoho.crm.getRecordById("Contacts",contact_id);
+	contact_owner = contact_rec.get("Owner").get("Name");
+	if(contact_owner != deal_rec.get("Owner").get("Name"))
+	{
+		updt = Map();
+		updt.put("Owner",deal_rec.get("Owner").get("id"));
+		info zoho.crm.updateRecord("Contacts",contact_id,updt);
+	}
+}
