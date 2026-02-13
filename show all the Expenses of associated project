@@ -1,0 +1,105 @@
+
+projectID = project.get("project_id");
+organizationID = organization.get("organization_id");
+projects = zoho.books.getRecordsByID("projects",organizationID,projectID,"books");
+project = projects.get("project");
+searchParam = {"project_id":projectID};
+search_expenses = zoho.books.getRecords("expenses",organizationID,searchParam,"books");
+expense = search_expenses.get("expenses");
+CleanUp = 0;
+Demolition = 0;
+Electrical = 0;
+Engineering = 0;
+Excavation = 0;
+Finish = 0;
+Misc = 0;
+Permit = 0;
+Plumbing = 0;
+Rebar = 0;
+Shotcrete = 0;
+Tile = 0;
+Walls = 0;
+for each  rec in expense
+{
+	record = zoho.books.getRecordsByID("expenses",organizationID,rec.get("expense_id"),"books");
+	exp = record.get("expense");
+	tags = ifnull(exp.get("tags"),List());
+	total = exp.get("total");
+	for each  tag in tags
+	{
+		if(tag.get("tag_name") == "Pool Category")
+		{
+			option = tag.get("tag_option_name");
+			if(option == "Clean Up")
+			{
+				CleanUp = CleanUp + total;
+			}
+			if(option == "Demolition")
+			{
+				Demolition = Demolition + total;
+			}
+			if(option == "Electrical")
+			{
+				Electrical = Electrical + total;
+			}
+			if(option == "Engineering")
+			{
+				Engineering = Engineering + total;
+			}
+			if(option == "Excavation")
+			{
+				Excavation = Excavation + total;
+			}
+			if(option == "Finish")
+			{
+				Finish = Finish + total;
+			}
+			if(option == "Misc")
+			{
+				Misc = Misc + total;
+			}
+			if(option == "Permit")
+			{
+				Permit = Permit + total;
+			}
+			if(option == "Plumbing")
+			{
+				Plumbing = Plumbing + total;
+			}
+			if(option == "Rebar")
+			{
+				Rebar = Rebar + total;
+			}
+			if(option == "Shotcrete")
+			{
+				Shotcrete = Shotcrete + total;
+			}
+			if(option == "Tile")
+			{
+				Tile = Tile + total;
+			}
+			if(option == "Walls")
+			{
+				Walls = Walls + total;
+			}
+		}
+	}
+}
+resultlist = list();
+resultlist.add("Clean Up = " + CleanUp);
+resultlist.add("Demolition = " + Demolition);
+resultlist.add("Electrical = " + Electrical);
+resultlist.add("Engineering = " + Engineering);
+resultlist.add("Excavation = " + Excavation);
+resultlist.add("Finish = " + Finish);
+resultlist.add("Misc = " + Misc);
+resultlist.add("Permit = " + Permit);
+resultlist.add("Plumbing = " + Plumbing);
+resultlist.add("Rebar = " + Rebar);
+resultlist.add("Shotcrete = " + Shotcrete);
+resultlist.add("Tile = " + Tile);
+resultlist.add("Walls = " + Walls);
+show = Map();
+show.put("message",resultlist);
+show.put("code",0);
+return show;
