@@ -1,0 +1,73 @@
+void automation.W9Agreement(Int dealId)
+{
+deal = zoho.crm.getRecordById("Deals",dealId);
+stage = deal.get("Stage");
+// response = zoho.sign.getTemplates();
+// info response;
+contact_1 = deal.get("Contact_Name");
+contactId = contact_1.get("id");
+// // Step 2: Get Contact Record
+contact = zoho.crm.getRecordById("Contacts",contactId);
+firstName = ifnull(contact.get("First_Name"),"");
+lastName = ifnull(contact.get("Last_Name"),"");
+fullName = firstName + " " + lastName;
+email = ifnull(contact.get("Email"),"");
+service_type = ifnull(deal.get("Service_Type"),"");
+info "Service Type: " + service_type;
+// Step 3: Template and field logic
+templateId = null;
+actionId = null;
+current_date1 = null;
+current_date1 = zoho.currentdate.toString("yyyy-MM-dd");
+fieldTextData = Map();
+fieldTextData.put("Sign date",current_date1);
+info fieldTextData;
+templateId = 483161000000055317;
+actionId = 483161000000055386;
+// Step 4: Build recipient/action list
+actionMap = Map();
+actionMap.put("recipient_name",fullName);
+actionMap.put("recipient_email",email);
+actionMap.put("action_type","SIGN");
+actionMap.put("action_id",actionId);
+actionMap.put("role","Signer");
+actionMap.put("verify_recipient",false);
+actionsList = List();
+actionsList.add(actionMap);
+// Step 5: Prepare full data payload
+fieldDataMap = Map();
+fieldDataMap.put("field_text_data",fieldTextData);
+templatesMap = Map();
+templatesMap.put("actions",actionsList);
+templatesMap.put("field_data",fieldDataMap);
+dataMap = Map();
+dataMap.put("templates",templatesMap);
+parameters = Map();
+parameters.put("is_quicksend","true");
+parameters.put("data",dataMap);
+//Step 6: Send Document
+response = zoho.sign.createUsingTemplate(templateId,parameters,"zohosign");
+info "📤 Zoho Sign Response: " + response;
+if(response == null || response.get("code") != "0")
+{
+	info "Error sending document: " + response;
+}
+else
+{
+	update = Map();
+	update.put("Pipeline","Referral only-agent Pipeline");
+	update.put("Stage","W9 Agreement Sent");
+	tttt = List();
+	tttt.add(update);
+	dataaamap = Map();
+	dataaamap.put("data",tttt);
+	create = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v8/Deals/" + dealId + ""
+		type :PUT
+		parameters:dataaamap.toString()
+		connection:"zohocrm"
+	];
+	info create;
+}
+}
