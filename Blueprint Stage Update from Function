@@ -1,0 +1,27 @@
+record =zoho.crm.getRecordById("Maintenance_Geography", id);
+info record;
+if(record.size() > 0)
+{
+blueprint_map = Map();
+blueprint_list = List();
+process_info_map = Map();
+update_map = Map();
+update_map.put("Stage","Send Hub Contract");
+//   if mandatory  //
+update_map.put("Email",record.get("Email")); //
+update_map.put("Name",record.get("Name")); //
+update_map.put("Discount_summary",record.get("Discount_summary")); //
+update_map.put("Summary",record.get("Summary")); //
+process_info_map.put("transition_id","6532936000164410176");
+process_info_map.put("data",update_map);
+blueprint_list.add(process_info_map);
+blueprint_map.put("blueprint",blueprint_list);
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/Maintenance_Geography/" + id + "/actions/blueprint"
+	type :PUT
+	parameters:blueprint_map.toString()
+	connection:"crmfile"
+];
+info response;
+}
