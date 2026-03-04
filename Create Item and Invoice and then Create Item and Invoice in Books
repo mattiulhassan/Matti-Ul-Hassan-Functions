@@ -1,0 +1,73 @@
+void automation.Fixed_Amount_invoice(Int id)
+{
+organizationID = "872049906";
+rec = zoho.crm.getRecordById("Bad_Debts",id);
+account_id = rec.get("Account").get("id");
+account_name = rec.get("Account").get("name");
+crm_product = Map();
+item_name = rec.get("Name") + " - " + "Fixed Amount";
+crm_product.put("Product_Name",item_name);
+crm_product.put("Unit_Price",rec.get("Fixed_Amount"));
+product = zoho.crm.createRecord("Products",crm_product);
+product_id = product.get("id");
+crm_invoice = Map();
+crm_invoice.put("Bad_Debits",id);
+crm_invoice.put("Subject",rec.get("Name"));
+crm_invoice.put("Account_Name",account_id);
+crm_invoice.put("Invoice_Date",zoho.currentdate.toString("MMM dd, yyyy"));
+crm_invoice.put("Due_Date",zoho.currentdate.addDay(7).toString("MMM dd, yyyy"));
+a = 1;
+for each  rec in a
+{
+	item = Map();
+	item.put("Product_Name",product_id);
+	item.put("Quantity","1");
+	item.put("Tax","0");
+	item_list = List();
+	item_list.add(item);
+	crm_invoice.put("Invoiced_Items",item_list);
+}
+invoice_rec = zoho.crm.createRecord("Invoices",crm_invoice);
+logs = Map();
+parameters = Map();
+parameters.put("organization_id",organizationID);
+id = id.toString();
+baseUri = "https://www.zohoapis.com/books/v3/crm/item/" + product_id + "/import?organization_id=712209166";
+Resp = invokeurl
+[
+	url :baseUri
+	type :POST
+	connection:"books"
+];
+logs.put("REsp",Resp);
+item_id = logs.get("item").get("item_id");
+searchParam = {"name":account_name};
+search_customer = zoho.books.getRecords("contacts",organizationID,searchParam,"books");
+if(search_customer.size() > 0)
+{
+	customer_id = search_customer.get("contacts").getJSON("contact_id");
+}
+books_invoice_map = Map();
+books_invoice_map.put("customer_id",customer_id);
+for each  line_item in a
+{
+	item_map = Map();
+	books_line_items = list();
+	item_map.put("tax_amount","0");
+	item_map.put("item_id",item_id);
+	item_map.put("rate",rec.get("Fixed_Amount"));
+	item_map.put("quantity","1");
+	books_line_items.add(item_map);
+}
+invoice_update = Map();
+books_invoice_map.put("date",zoho.currentdate.toString("MMM dd, yyyy"));
+books_invoice_map.put("due_date",zoho.currentdate.addDay(7).toString("MMM dd, yyyy"));
+books_invoice_map.put("status","Unpaid");
+books_invoice_map.put("line_items",books_line_items);
+create_resp = zoho.books.createRecord("invoices",organizationID,books_invoice_map,"books");
+info create_resp;
+invoice_id = create_resp.get("invoice").get("invoice_id");
+invoice_update = Map();
+invoice_update.put("Fixed_Amount_Books_Invoice_ID",invoice_id);
+crt = zoho.crm.updateRecord("Bad_Debts",id,invoice_update);
+}
