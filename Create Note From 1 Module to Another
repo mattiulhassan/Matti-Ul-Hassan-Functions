@@ -1,0 +1,38 @@
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v8/Contacts/" + id + "/Notes?fields=Note_Title,Note_Content&sort_by=Created_Time&sort_order=desc"
+	type :GET
+	connection:"crm_con"
+];
+notes = response.getJSON("data");
+if(notes.size() > 0)
+{
+	latestNote = notes.get(0);
+	LocCampaigns_rec = zoho.crm.searchRecords("LocCampaigns","(Contacts:equals:" + id + ")");
+	if(LocCampaigns_rec.size() > 0)
+	{
+		for each  rec in LocCampaigns_rec
+		{
+			cpId = rec.get("id");
+			data_map = Map();
+			data_map.put("Note_Title",latestNote.get("Note_Title"));
+			data_map.put("Note_Content",latestNote.get("Note_Content"));
+			module_obj = Map();
+			module_obj.put("api_name","LocCampaigns");
+			parent_obj = Map();
+			parent_obj.put("id",cpId);
+			parent_obj.put("module",module_obj);
+			data_map.put("Parent_Id",parent_obj);
+			payload = Map();
+			payload.put("data",{data_map});
+			create_resp = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v8/Notes"
+				type :POST
+				parameters:payload.toString()
+				connection:"crm_con"
+			];
+			info create_resp;
+		}
+	}
+}
