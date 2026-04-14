@@ -1,0 +1,30 @@
+visitor_message = "Evaluate this candidate: " + candidate_name + ", Skills: " + candidate_skills + ", Experience: " + candidate_experience + " years, Location: " + candidate_location + ", Licenses: " + candidate_licenses + ", Assessment: " + candidate_assessment + " Job: Title: " + job_title + ", Required Skills: " + job_skills + ", Experience Required: " + job_experience + ", Location: " + job_location + ", Licenses Required: " + job_licenses + ", Description: " + job_description;
+
+combined_message = prompt + "\n\n" + visitor_message;
+
+api_key = "******************************";
+api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + api_key;
+payload = Map();
+user_part = Map();
+user_part.put("text", combined_message);
+user_content = Map();
+user_content.put("role", "user");
+user_content.put("parts", {user_part});
+payload.put("contents", {user_content});
+
+headers = Map();
+headers.put("Content-Type", "application/json");
+
+response = postUrl(api_url, payload.toString(), headers);
+ai_response_map = response.toMap();
+candidates = ai_response_map.get("candidates");
+
+if(candidates != null && candidates.size() > 0)
+{
+	ai_content = candidates.get(0).get("content").get("parts").get(0).get("text");
+	info ai_content;
+}
+else
+{
+	info "Error: " + response;
+}
