@@ -1,0 +1,5 @@
+isoString = Data.get("DateTime");
+parsedDate = isoString.toDate("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+formattedDate = parsedDate.toString("MMM dd, yyyy hh:mm a");
+update = Map();
+update.put("Expected_Parcel_Date",formattedDate);
