@@ -1,0 +1,33 @@
+void automation.Sent_Attachment(Int dealId)
+{
+dealDetails = zoho.crm.getRecordById("Deals",dealId);
+if(dealDetails.get("Contact_Name") != null)
+{
+	contactId = dealDetails.get("Contact_Name").get("id");
+	contactDetails = zoho.crm.getRecordById("Contacts",contactId);
+	contactEmail = contactDetails.get("Email");
+	attachment = zoho.crm.getRelatedRecords("Attachments","Deals",dealId);
+	if(attachment.size() > 0)
+	{
+		latestAttachment = attachment.get(0);
+		attachmentId = latestAttachment.get("id");
+		doc = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Deals/" + dealId + "/Attachments/" + attachmentId
+			type :GET
+			connection:"connection"
+		];
+		if(contactEmail != null && contactEmail != "")
+		{
+			sendmail
+			[
+				from :zoho.loginuserid
+				to :contactEmail
+				subject :"Completed Agreement: " + dealDetails.get("Deal_Name")
+				message :"The signed agreement has been successfully processed. Please find your copy attached."
+				Attachments :file:doc
+			]
+		}
+	}
+}
+}
