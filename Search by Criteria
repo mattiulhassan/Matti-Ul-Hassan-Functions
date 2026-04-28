@@ -1,0 +1,2 @@
+searchParam = {"zcrm_contact_id":criteria};
+search_customer = zoho.crm.getRecords("contacts",organizationID,searchParam);
