@@ -1,0 +1,7 @@
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v8/Deals/" + deal_id + "/actions/blueprint"
+	type :GET
+	connection:"crm_con"
+];
+info response;
