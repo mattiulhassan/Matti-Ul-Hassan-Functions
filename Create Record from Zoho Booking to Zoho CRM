@@ -1,0 +1,83 @@
+string standalone.Past_Appointment()
+{
+	from_time = "01-Jan-2020 00:00:00";
+	to_time = "13-Aug-2025 23:59:59";
+	total_created = 0;
+	total_skipped = 0;
+	pages = {1,2,3,4,5,6,7,8,9,10};
+	for each page in pages
+	{
+		params = Map();
+		data = Map();
+		data.put("from_time", from_time);
+		data.put("to_time", to_time);
+		data.put("page", page);
+		data.put("per_page", 100);
+		params.put("data", data.toString());
+		bookings_response = invokeurl
+		[
+			url :"https://www.zohoapis.ca/bookings/v1/json/fetchappointment"
+			type :POST
+			parameters:params
+			connection:"zohobookings"
+		];
+		status = bookings_response.get("response").get("status");
+		if(status != "success")
+		{
+			info "Stopped at page: " + page;
+			break;
+		}
+		returnvalue = bookings_response.get("response").get("returnvalue");
+		bookings_list = ifnull(returnvalue.get("response"), List());
+		info "Page " + page + " count: " + bookings_list.size();
+		for each booking in bookings_list
+		{
+			email = ifnull(booking.get("customer_email"), "");
+			customer_name = ifnull(booking.get("customer_name"), "");
+			first_name = ifnull(booking.get("customer_first_name"), "");
+			last_name = ifnull(booking.get("customer_last_name"), "");
+			phone = ifnull(booking.get("customer_contact_no"), "");
+			service_name = ifnull(booking.get("service_name"), "");
+			start_time = ifnull(booking.get("start_time"), "");
+			staff_name = ifnull(booking.get("staff_name"), "");
+			booking_id = ifnull(booking.get("booking_id"), "");
+			booked_on = ifnull(booking.get("booked_on"), "");
+			if(email == "")
+			{
+				total_skipped = total_skipped + 1;
+				continue;
+			}
+			if(first_name == "" && last_name == "")
+			{
+				name_parts = customer_name.toList(" ");
+				first_name = if(name_parts.size() > 0, name_parts.get(0), "");
+				last_name = if(name_parts.size() > 1, name_parts.get(1), customer_name);
+			}
+			existing = zoho.crm.searchRecords("Leads", "(Email:equals:" + email + ")");
+			if(existing != null && existing.size() > 0)
+			{
+				total_skipped = total_skipped + 1;
+				continue;
+			}
+			lead_map = Map();
+			lead_map.put("First_Name", first_name);
+			lead_map.put("Last_Name", last_name);
+			lead_map.put("Email", email);
+			lead_map.put("Phone", phone);
+			lead_map.put("Lead_Source", "Zoho Bookings");
+			lead_map.put("Description", "Booking ID: " + booking_id + " | Service: " + service_name + " | Appointment: " + start_time + " | Staff: " + staff_name + " | Booked On: " + booked_on);
+			create_response = zoho.crm.createRecord("Leads", lead_map);
+			info "Lead created: " + email;
+			total_created = total_created + 1;
+		}
+		next_page = ifnull(returnvalue.get("next_page_available"), false);
+		if(next_page != true)
+		{
+			info "All pages done";
+			break;
+		}
+	}
+	info "===== DONE =====";
+	info "Created: " + total_created + " | Skipped: " + total_skipped;
+	return "";
+}
