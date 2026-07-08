@@ -1,0 +1,29 @@
+leadRecord = zoho.crm.getRecordById("Leads",leadId);
+leadEmail = leadRecord.get("Email");
+leadPhone = leadRecord.get("Phone");
+if(leadEmail != null && leadEmail == "" || leadPhone != null && leadPhone != "")
+{
+	emailSearch = zoho.crm.searchRecords("Leads","Email:equals:" + leadEmail);
+	phoneSearch = zoho.crm.searchRecords("Leads","Phone:equals:" + leadPhone);
+	if(emailSearch.size() > 0 && emailSearch != Null || phoneSearch.size() > 0 && phoneSearch != Null)
+	{
+		tag1 = Map();
+		tag1.put("name","Duplicate");
+		
+		tags_list = List();
+		tags_list.add(tag1);
+		
+		param = Map();
+		param.put("tags",tags_list);
+		
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v8/Leads/" + leadId + "/actions/add_tags"
+			type :POST
+			parameters: param.toString()
+			connection:"zoho_crm_conn"
+		];
+		
+		info response;
+	}
+}
