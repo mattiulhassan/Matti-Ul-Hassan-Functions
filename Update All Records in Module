@@ -1,0 +1,31 @@
+	deals_list=List();
+	page1=zoho.crm.getRecords("Deals",1,200);
+	if(page1.size() > 0){deals_list.addAll(page1);}
+	page2=zoho.crm.getRecords("Deals",2,200);
+	if(page2.size() > 0){deals_list.addAll(page2);}
+	b=0;
+	a=0;
+	for each deal in deals_list
+	{
+		b=b+1;
+		deal_id=deal.get("id");
+		if(deal.get("Books_invoice_id")==Null)
+		{
+		search_params=Map();
+		search_params.put("zcrm_potential_id",deal_id);
+		search_invoices=zoho.books.getRecords("invoices",org_id,search_params,"books");
+		if(search_invoices.get("code") == 0)
+		{
+			invoices=search_invoices.get("invoices");
+			if(invoices.size() > 0)
+			{
+				invoice_id=invoices.get(0).get("invoice_id");
+				update_map=Map();
+				update_map.put("Books_invoice_id",invoice_id);
+				info zoho.crm.updateRecord("Deals",deal_id,update_map);
+				a=a+1;
+				}
+			}
+		}
+	}
+	info "total deals record=" + b + "total updated=" + a ;
