@@ -1,0 +1,1 @@
+zoho.crm.updateRecord("Deals",deal_id,deal_update,{"trigger":{"workflow"}});
