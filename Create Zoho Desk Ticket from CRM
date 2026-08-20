@@ -1,0 +1,80 @@
+void automation.create_ticket(Int id)
+{
+lead_rec = zoho.crm.getRecordById("Leads",id);
+raw_desc = lead_rec.get("Description");
+lead_description = if(raw_desc != null,raw_desc.replaceAll("\n",""),"No Message");
+first_name = ifnull(lead_rec.get("First_Name"),"");
+last_name = ifnull(lead_rec.get("Last_Name"),"Unknown");
+full_name = (first_name + " " + last_name).trim();
+lead_email = ifnull(lead_rec.get("Email"),"");
+lead_phone = ifnull(lead_rec.get("Phone"),"");
+brand_name = lead_rec.get("Form_Name");
+org_id = "803701361";
+contact_id = "";
+search_url = "https://desk.zoho.com/api/v1/contacts/search?email=" + zoho.encryption.urlEncode(lead_email);
+search_response = invokeurl
+[
+	url :search_url
+	type :GET
+	headers:{"orgId":org_id}
+	connection:"zoho_desk"
+];
+info search_response;
+if(search_response.get("data") != null && search_response.get("data").size() > 0)
+{
+	contact_id = search_response.get("data").get(0).get("id");
+}
+if(contact_id == "")
+{
+	contact_data = Map();
+	contact_data.put("lastName",last_name);
+	if(first_name != "")
+	{
+		contact_data.put("firstName",first_name);
+	}
+	if(lead_email != "")
+	{
+		contact_data.put("email",lead_email);
+	}
+	if(lead_phone != "")
+	{
+		contact_data.put("phone",lead_phone);
+	}
+	create_contact_response = invokeurl
+	[
+		url :"https://desk.zoho.com/api/v1/contacts"
+		type :POST
+		parameters:contact_data.toString()
+		headers:{"orgId":org_id}
+		connection:"zoho_desk"
+	];
+	info create_contact_response;
+	contact_id = create_contact_response.get("id");
+}
+ticket_data = Map();
+ticket_data.put("description",lead_description);
+ticket_data.put("subject","New Ticket from: " + brand_name);
+if(lead_email != "")
+{
+	ticket_data.put("email",lead_email);
+}
+if(lead_phone != "")
+{
+	ticket_data.put("phone",lead_phone);
+}
+ticket_data.put("departmentId","DEpartment_ID");
+ticket_data.put("assigneeId","Agent_ID");
+ticket_data.put("contactId",contact_id);
+ticket_data.put("status","Open");
+ticket_data.put("priority","Medium");
+ticket_data.put("channel","CRM");
+desk_response = invokeurl
+[
+	url :"https://desk.zoho.com/api/v1/tickets"
+	type :POST
+	parameters:ticket_data.toString()
+	headers:{"orgId":org_id}
+	connection:"zoho_desk"
+];
+info desk_response;
+}
