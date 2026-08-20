@@ -1,0 +1,314 @@
+void Deal_invoice_Order(map data)
+{
+info "--- SCRIPT STARTED ---";
+// ─── CUSTOMER / CONTACT (CRM) ───────────────────────────────────────────
+customer = data.get("customer");
+if(customer == null)
+{
+	info "Error: No customer data found in payload.";
+	return;
+}
+customer_id = customer.get("id");
+first_name = ifnull(customer.get("first_name"),"");
+last_name = ifnull(customer.get("last_name"),"");
+email = ifnull(customer.get("email"),"");
+info "Processing Customer: " + email;
+deal_map = Map();
+contact_map = Map();
+contact_map.put("First_Name",first_name);
+contact_map.put("Last_Name",last_name);
+contact_map.put("Email",email);
+default_address = customer.get("default_address");
+if(default_address != null && default_address.size() > 0)
+{
+	company = default_address.get("company");
+	if(company != null && company != "")
+	{
+		create_account = zoho.crm.createRecord("Accounts",{"Account_Name":company});
+		account_id = create_account.get("id");
+		contact_map.put("Account_Name",account_id);
+		deal_map.put("Account_Name",account_id);
+	}
+	contact_map.put("Phone",ifnull(default_address.get("phone"),""));
+	contact_map.put("Mailing_Zip",ifnull(default_address.get("zip"),""));
+	contact_map.put("Mailing_City",ifnull(default_address.get("city"),""));
+	contact_map.put("Mailing_Street",ifnull(default_address.get("address1"),""));
+	contact_map.put("Mailing_Country",ifnull(default_address.get("country"),""));
+	contact_map.put("Mailing_State",ifnull(default_address.get("province"),""));
+	contact_map.put("Mailing_Address_2",ifnull(default_address.get("address2"),""));
+	contact_map.put("Country_Code",ifnull(default_address.get("country_code"),""));
+}
+search_contact = zoho.crm.searchRecords("Contacts","(Email:equals:" + email + ")");
+contact_id = "";
+if(search_contact != null && search_contact.size() > 0 && search_contact.get(0).get("id") != null)
+{
+	contact_id = search_contact.get(0).get("id");
+	zoho.crm.updateRecord("Contacts",contact_id,contact_map);
+	info "CRM Contact Updated: " + contact_id;
+}
+else
+{
+	create_contact = zoho.crm.createRecord("Contacts",contact_map);
+	contact_id = create_contact.get("id");
+	info "CRM Contact Created: " + contact_id;
+}
+// ─── DEAL (CRM) ─────────────────────────────────────────────────────────
+deal_map.put("Contact_Name",contact_id);
+deal_map.put("Amount",data.get("total_price"));
+deal_map.put("Layout",{"id":"5667116000003394001"});
+deal_map.put("Order_URL","order_status_url");
+financial_status = data.get("financial_status");
+deal_map.put("Stage","New Order");
+deal_map.put("Deal_Name",ifnull(data.get("name"),"Order") + " - " + first_name);
+create_deal = zoho.crm.createRecord("Deals",deal_map);
+deal_id = create_deal.get("id");
+info "CRM Deal Created: " + deal_id;
+// ─── CONTACT (BOOKS) ────────────────────────────────────────────────────
+searchParam = {"email":email};
+search_item = zoho.books.getRecords("Contacts","905190048",searchParam,"books");
+contacts_list = search_item.get("contacts");
+z_contact_id = "";
+if(contacts_list != null && contacts_list.size() > 0)
+{
+	z_contact_id = contacts_list.get(0).get("contact_id");
+	info "Books Contact Found: " + z_contact_id;
+}
+else
+{
+	contact_create_map1 = Map();
+	contact_create_map = Map();
+	if(default_address != null && default_address.size() > 0)
+	{
+		address_map = Map();
+		address_map.put("address",ifnull(default_address.get("address1"),""));
+		address_map.put("street2",ifnull(default_address.get("address2"),""));
+		address_map.put("country",ifnull(default_address.get("country"),""));
+		address_map.put("state",ifnull(default_address.get("province"),""));
+		address_map.put("city",ifnull(default_address.get("city"),""));
+		address_map.put("zip",ifnull(default_address.get("zip"),""));
+		address_map.put("phone",ifnull(default_address.get("phone"),""));
+		contact_create_map.put("billing_address",address_map);
+		contact_create_map1.put("phone",ifnull(default_address.get("phone"),""));
+	}
+	contact_create_map1.put("first_name",first_name);
+	contact_create_map1.put("last_name",last_name);
+	contact_create_map1.put("email",email);
+	contact_create_list1 = List();
+	contact_create_list1.add(contact_create_map1);
+	contact_create_map.put("contact_persons",contact_create_list1);
+	contact_create_map.put("contact_name",first_name + " " + last_name);
+	contact_create_map.put("status","active");
+	contact_created = zoho.books.createRecord("contacts","905190048",contact_create_map,"books_con");
+	z_contact_id = contact_created.get("contact").get("contact_id");
+	info "Books Contact Created: " + z_contact_id;
+}
+// ─── LINE ITEMS (BOOKS) ─────────────────────────────────────────────────
+line_items = data.get("line_items");
+item_list = List();
+if(line_items != null)
+{
+	for each  product_details in line_items
+	{
+		product_code = product_details.get("title");
+		item_id = "";
+		if(product_code != null && product_code != "")
+		{
+			searchParam = {"name":product_code};
+			search_prod = zoho.books.getRecords("items","905190048",searchParam,"books_con");
+			prod_items = search_prod.get("items");
+			if(prod_items != null && prod_items.size() > 0)
+			{
+				item_id = prod_items.get(0).get("item_id");
+			}
+		}
+		if(item_id == "" || item_id == null)
+		{
+			item_map = Map();
+			item_map.put("can_be_purchased",true);
+			item_map.put("can_be_sold",true);
+			item_map.put("track_inventory",false);
+			item_map.put("item_type","inventory");
+			item_map.put("product_type","goods");
+			item_map.put("status","active");
+			item_map.put("name",ifnull(product_details.get("title"),"Un-named" + "Shopify Item" + product_details.get("variant_id")));
+			item_price = ifnull(product_details.get("price"),"0");
+			item_map.put("rate",item_price);
+			item_map.put("purchase_rate",0);
+			item_map.put("sku",product_code);
+			create_item = zoho.books.createRecord("items","905190048",item_map,"books_con");
+			info create_item;
+			if(create_item.get("item") != null)
+			{
+				item_id = create_item.get("item").get("item_id");
+			}
+		}
+		lineitem_map = Map();
+		lineitem_map.put("item_id",item_id);
+		lineitem_map.put("quantity",product_details.get("quantity"));
+		lineitem_map.put("rate",product_details.get("price"));
+		item_list.add(lineitem_map);
+	}
+}
+info "Line Items Processed: " + item_list;
+// ─── INVOICE (BOOKS) ────────────────────────────────────────────────────
+created_at_str = ifnull(data.get("created_at"),"").toString();
+invoice_date = "";
+if(created_at_str.contains("T"))
+{
+	invoice_date = created_at_str.getPrefix("T");
+}
+closed_at_str = ifnull(data.get("closed_at"),created_at_str).toString();
+due_date = "";
+if(closed_at_str.contains("T"))
+{
+	due_date = closed_at_str.getPrefix("T");
+}
+inv_map = Map();
+inv_map.put("customer_id",z_contact_id);
+inv_map.put("line_items",item_list);
+inv_map.put("reference_number",data.get("name"));
+inv_map.put("zcrm_potential_id",deal_id);
+inv_map.put("notes",ifnull(data.get("note"),""));
+if(invoice_date != "")
+{
+	inv_map.put("date",invoice_date);
+}
+if(due_date != "")
+{
+	inv_map.put("due_date",due_date);
+}
+total_discounts = data.get("total_discounts");
+if(total_discounts != null && total_discounts.toDecimal() > 0)
+{
+	inv_map.put("discount",total_discounts.toDecimal());
+	inv_map.put("discount_type","entity_level");
+	inv_map.put("is_discount_before_tax",true);
+}
+shipping_charge = 0;
+if(data.get("total_shipping_price_set") != null && data.get("total_shipping_price_set").get("shop_money") != null)
+{
+	shipping_charge = data.get("total_shipping_price_set").get("shop_money").get("amount");
+}
+inv_map.put("shipping_charge",shipping_charge);
+search_resp = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/invoices?organization_id=905190048&reference_number=" + data.get("name")
+	type :GET
+	connection:"books_con"
+];
+invoices = search_resp.get("invoices");
+invoice_id = "";
+if(invoices != null && invoices.size() > 0)
+{
+	inv_map.put("reason","Shopify Update");
+	invoice_id = invoices.get(0).get("invoice_id");
+	zoho.books.updateRecord("invoices","905190048",invoice_id,inv_map,"books_con");
+	info "Books Invoice Updated: " + invoice_id;
+}
+else
+{
+	invoice_created = zoho.books.createRecord("invoices","905190048",inv_map,"books_con");
+	info invoice_created;
+	invoice_id = invoice_created.get("invoice").get("invoice_id");
+	info "Books Invoice Created: " + invoice_id;
+}
+// ─── MARK INVOICE AS SENT (Draft se nikalne ke liye) ─────
+if(invoice_id != "")
+{
+	status_url = "https://www.zohoapis.com/books/v3/invoices/" + invoice_id + "/status/sent?organization_id=905190048";
+	status_resp = invokeurl
+	[
+		url :status_url
+		type :POST
+		connection:"books_con"
+	];
+	msg = ifnull(status_resp.get("message"),"Status Changed");
+	info "Invoice Marked as Sent: " + msg;
+}
+// ─── PAYMENT (BOOKS) ────────────────────────────────────────────────────
+if(financial_status == "paid" && invoice_id != "")
+{
+	headersMap = Map();
+	headersMap.put("X-Shopify-Access-Token","Insert Your Access Token here");
+	headersMap.put("Content-Type","application/json");
+	response = invokeurl
+	[
+		url :"https://honey-spree.myshopify.com/admin/api/2025-01/orders/" + data.get("id") + "/transactions.json"
+		type :GET
+		headers:headersMap
+	];
+	transactions = response.get("transactions");
+	if(transactions != null && transactions.size() > 0)
+	{
+		payment = transactions.get(0);
+		invoice_resp = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/invoices/" + invoice_id + "?organization_id=905190048"
+			type :GET
+			connection:"books_con"
+		];
+		if(invoice_resp.get("invoice") != null)
+		{
+			balance_due = invoice_resp.get("invoice").get("balance").toDecimal();
+			info "Invoice Balance Due Before Payment: " + balance_due;
+			if(balance_due > 0)
+			{
+				shopify_amount = payment.get("amount").toDecimal();
+				// Simple if/else (No shortcut to avoid syntax errors)
+				actual_amount = shopify_amount;
+				if(shopify_amount > balance_due)
+				{
+					actual_amount = balance_due;
+				}
+				payment_date = "";
+				processed_at = payment.get("processed_at");
+				if(processed_at != null)
+				{
+					if(processed_at.toString().contains("T"))
+					{
+						payment_date = processed_at.toString().getPrefix("T");
+					}
+				}
+				paymentMap = Map();
+				paymentMap.put("customer_id",z_contact_id);
+				paymentMap.put("amount",actual_amount);
+				if(payment_date != "")
+				{
+					paymentMap.put("date",payment_date);
+				}
+				paymentMap.put("payment_mode",ifnull(payment.get("gateway"),"Shopify Payment"));
+				paymentMap.put("reference_number",data.get("name"));
+				paymentMap.put("zcrm_potential_id",deal_id);
+				paymentMap.put("description",ifnull(payment.get("message"),""));
+				inv = Map();
+				inv_lst = List();
+				inv.put("invoice_id",invoice_id);
+				inv.put("amount_applied",actual_amount);
+				inv_lst.add(inv);
+				paymentMap.put("invoices",inv_lst);
+				pay_response = invokeurl
+				[
+					url :"https://www.zohoapis.com/books/v3/customerpayments?organization_id=905190048"
+					type :POST
+					parameters:paymentMap.tostring()
+					connection:"books_con"
+				];
+				info "Payment Application Response: " + pay_response;
+			}
+		}
+	}
+	else
+	{
+		info "Shopify status is paid, but no transactions found in API.";
+	}
+}
+// ─── UPDATE DEAL ────
+if(deal_id != "" && invoice_id != "")
+{
+	crm_update = Map();
+	crm_update.put("Books_invoice_id",invoice_id);
+	zoho.crm.updateRecord("Deals",deal_id,crm_update);
+	info "CRM Deal updated with Invoice ID.";
+}
+info "--- SCRIPT FINISHED SUCCESSFULLY ---";
+}
